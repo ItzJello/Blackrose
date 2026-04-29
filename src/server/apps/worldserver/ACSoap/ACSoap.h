@@ -21,7 +21,6 @@
 #include "Define.h"
 #include <future>
 
-void process_message(struct soap* soap_message);
 void ACSoapThread(const std::string& host, uint16 port);
 
 class SOAPCommand
