@@ -56,8 +56,8 @@ jobs:
             # Pull and recreate containers from your custom images.
             DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
             DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f conf/dist/docker-compose.override.yml pull
+              docker compose -f docker-compose.yml -f docker-compose.override.yml pull
 
             DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
             DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f conf/dist/docker-compose.override.yml up -d --remove-orphans
+              docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans

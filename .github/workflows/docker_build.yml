@@ -27,7 +27,7 @@ env:
   COMPOSE_DOCKER_CLI_BUILD: 1
   DOCKER_BUILDKIT: 1
   RUNNING_ON_PRIMARY_BRANCH: ${{ github.ref_name == 'master' && 'true' || 'false' }}
-  IMAGE_PREFIX: ghcr.io/itzjello/blackrose
+  IMAGE_PREFIX: ghcr.io/blackrosewow/blackrose
 
 jobs:
   build-containers:
