@@ -20,9 +20,11 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "WorldConfig.h"
+#include <cctype>
 #include <cstdlib>
 #include <ctime>
 #include <sstream>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -30,6 +32,83 @@ namespace
 {
 std::unordered_map<uint32, std::string> g_pendingKillerByPlayerLow;
 std::unordered_map<uint32, std::string> g_lastWordsByPlayerLow;
+
+std::string BrDeath_SanitizeForPipeLog(std::string value)
+{
+    for (char& ch : value)
+        if (ch == '|')
+            ch = '/';
+    return value;
+}
+
+bool BrDeath_IsNoiseLastWords(std::string_view msg)
+{
+    if (msg.empty())
+        return true;
+
+    // Trim leading whitespace for prefix checks
+    std::size_t start = 0;
+    while (start < msg.size() && std::isspace(static_cast<unsigned char>(msg[start])))
+        ++start;
+    if (start >= msg.size())
+        return true;
+
+    std::string_view trimmed = msg.substr(start);
+
+    auto startsWithNoCase = [](std::string_view hay, std::string_view needle) -> bool {
+        if (hay.size() < needle.size())
+            return false;
+        for (std::size_t i = 0; i < needle.size(); ++i)
+        {
+            unsigned char a = static_cast<unsigned char>(hay[i]);
+            unsigned char b = static_cast<unsigned char>(needle[i]);
+            if (std::tolower(a) != std::tolower(b))
+                return false;
+        }
+        return true;
+    };
+
+    if (startsWithNoCase(trimmed, "/"))
+        return true;
+    if (startsWithNoCase(trimmed, "."))
+        return true;
+    if (startsWithNoCase(trimmed, "syntax"))
+        return true;
+    if (startsWithNoCase(trimmed, "unknown command"))
+        return true;
+    if (startsWithNoCase(trimmed, "there is no such"))
+        return true;
+
+    return false;
+}
+
+void BrDeath_DeathFeedLog(Player const* player,
+    uint8 level,
+    std::string const& guildName,
+    std::string const& killerLabel,
+    std::string const& lastWords)
+{
+    if (!player)
+        return;
+
+    std::string const name = BrDeath_SanitizeForPipeLog(player->GetName());
+    std::string const guild = BrDeath_SanitizeForPipeLog(guildName);
+    std::string const killer = BrDeath_SanitizeForPipeLog(killerLabel);
+    std::string const words =
+        BrDeath_SanitizeForPipeLog(lastWords.empty() ? "..." : lastWords);
+
+    LOG_INFO("server.worldserver",
+        "BRDEATH|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+        name,
+        uint32(level),
+        guild,
+        killer,
+        player->GetMapId(),
+        player->GetPositionX(),
+        player->GetPositionY(),
+        player->GetPositionZ(),
+        words);
+}
 
 void StorePendingKiller(uint32 playerGuidLow, std::string label)
 {
@@ -55,6 +134,9 @@ void StoreLastWords(uint32 playerGuidLow, std::string const& msg)
     std::string trimmed = msg;
     if (trimmed.size() > 140)
         trimmed = trimmed.substr(0, 140);
+
+    if (BrDeath_IsNoiseLastWords(trimmed))
+        return;
 
     g_lastWordsByPlayerLow[playerGuidLow] = trimmed;
 }
@@ -140,7 +222,7 @@ uint32 BrDeath_SelectEntry(Player const* player)
     return entries[idx];
 }
 
-void BrDeath_SpawnGravestone(Player* player, uint8 level)
+void BrDeath_SpawnGravestone(Player* player)
 {
     if (!sConfigMgr->GetOption<bool>("BlackroseDeath.Gravestone.Enable", true))
         return;
@@ -283,8 +365,9 @@ public:
         uint8 const level = player->GetLevel();
         std::string const guildName = BrDeath_GuildName(player);
 
+        BrDeath_DeathFeedLog(player, level, guildName, killerLabel, lastWords);
         BrDeath_Broadcast(player, level, guildName, killerLabel, lastWords);
-        BrDeath_SpawnGravestone(player, level);
+        BrDeath_SpawnGravestone(player);
     }
 };
 
