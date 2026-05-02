@@ -1,4 +1,28 @@
 services:
+  # Discord BRDEATH forwarder; mount same logs volume as worldserver.
+  # Loads WEBHOOK_URL (and optional WEBHOOK_USERNAME, EMBED_COLOR) from env_file
+  # (default /etc/blackrose/death_webhook.env). Override path with
+  # DOCKER_DEATH_WEBHOOK_ENV_FILE in project .env. WORLD_LOG is forced for Docker.
+  # If the env file is missing, the script idles (no duplicate URL in compose .env).
+  ac-death-webhook:
+    container_name: ac-death-webhook
+    build:
+      context: .
+      dockerfile: apps/docker/Dockerfile.death-webhook
+    networks:
+      - ac-network
+    restart: unless-stopped
+    env_file:
+      - path: ${DOCKER_DEATH_WEBHOOK_ENV_FILE:-/etc/blackrose/death_webhook.env}
+        required: false
+    environment:
+      WORLD_LOG: /logs/Server.log
+    volumes:
+      - ${DOCKER_VOL_LOGS:-./env/dist/logs}:/logs:ro
+    depends_on:
+      ac-worldserver:
+        condition: service_started
+
   ac-db-import:
     image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-db-import:${DOCKER_IMAGE_TAG:-master}
 

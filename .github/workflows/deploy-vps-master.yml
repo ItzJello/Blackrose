@@ -53,10 +53,18 @@ jobs:
               make install
             fi
 
-            # Pull and recreate containers from your custom images.
+            # Stop stack, pull GHCR images, rebuild death-webhook sidecar, start.
+            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
+            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
+              docker compose -f docker-compose.yml -f docker-compose.override.yml down --remove-orphans
+
             DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
             DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
               docker compose -f docker-compose.yml -f docker-compose.override.yml pull
+
+            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
+            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
+              docker compose -f docker-compose.yml -f docker-compose.override.yml build ac-death-webhook
 
             DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
             DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \

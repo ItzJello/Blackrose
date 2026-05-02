@@ -1,0 +1,8 @@
+# Sidecar: tails worldserver Server.log and POSTs BRDEATH lines to Discord.
+FROM alpine:3.20
+RUN apk add --no-cache bash curl jq coreutils
+COPY death_webhook.sh /usr/local/bin/death_webhook.sh
+RUN chmod +x /usr/local/bin/death_webhook.sh
+ENV WORLD_LOG=/logs/Server.log
+WORKDIR /tmp
+ENTRYPOINT ["/usr/local/bin/death_webhook.sh"]
