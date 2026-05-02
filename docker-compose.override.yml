@@ -1,9 +1,10 @@
 services:
   # Discord BRDEATH forwarder; mount same logs volume as worldserver.
-  # Loads WEBHOOK_URL (and optional WEBHOOK_USERNAME, EMBED_COLOR) from env_file
-  # (default /etc/blackrose/death_webhook.env). Override path with
-  # DOCKER_DEATH_WEBHOOK_ENV_FILE in project .env. WORLD_LOG is forced for Docker.
-  # If the env file is missing, the script idles (no duplicate URL in compose .env).
+  # Loads WEBHOOK_URL (and optional WEBHOOK_USERNAME, EMBED_COLOR) from env_file.
+  # Default path below; override with DOCKER_DEATH_WEBHOOK_ENV_FILE in project .env
+  # to match where your file actually lives. The user running `docker compose` must
+  # be able to read that path (e.g. chgrp deploy + chmod 640 on /etc/...).
+  # If the env file is missing, the script idles. WORLD_LOG is forced for Docker.
   ac-death-webhook:
     container_name: ac-death-webhook
     build:
@@ -23,20 +24,23 @@ services:
       ac-worldserver:
         condition: service_started
 
+  # Default matches .github/workflows/docker_build.yml (GHCR). Override with
+  # DOCKER_IMAGE_PREFIX / DOCKER_IMAGE_TAG in .env or CI secrets if needed.
   ac-db-import:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-db-import:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-db-import:${DOCKER_IMAGE_TAG:-master}
 
   ac-worldserver:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-worldserver:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-worldserver:${DOCKER_IMAGE_TAG:-master}
 
   ac-authserver:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-authserver:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-authserver:${DOCKER_IMAGE_TAG:-master}
 
   ac-client-data-init:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-client-data:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-client-data:${DOCKER_IMAGE_TAG:-master}
 
   ac-tools:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-tools:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-tools:${DOCKER_IMAGE_TAG:-master}
 
+  # GHCR tag from docker_build.yml uses component-name "dev" (not dev-server).
   ac-dev-server:
-    image: ${DOCKER_IMAGE_PREFIX:-acore/ac-wotlk}-dev-server:${DOCKER_IMAGE_TAG:-master}
+    image: ${DOCKER_IMAGE_PREFIX:-ghcr.io/blackrosewow/blackrose}-dev:${DOCKER_IMAGE_TAG:-master}

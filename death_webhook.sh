@@ -72,13 +72,13 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-# Fail fast if libcurl rejects the URL (BOM, bad % encoding, stray bytes, etc.).
+# Validate URL/token without posting to the channel (GET webhook with token).
 err="$(mktemp)"
 set +e
 probe_http="$(
   curl -g -sS -o /dev/null -w '%{http_code}' \
-    -X POST -H 'Content-Type: application/json' \
-    -d '{"content":"."}' -- "$WEBHOOK_URL" 2>"$err"
+    -H 'Accept: application/json' \
+    -X GET -- "$WEBHOOK_URL" 2>"$err"
 )"
 probe_ec=$?
 set -e
@@ -92,6 +92,11 @@ if (( probe_ec != 0 )); then
   exit 1
 fi
 rm -f "$err"
+if [[ "$probe_http" != "200" ]]; then
+  echo "ERROR: Discord webhook probe failed (HTTP ${probe_http})." >&2
+  echo "       Check token/id; GET must return 200 for a valid webhook URL." >&2
+  exit 1
+fi
 
 echo "death_webhook: ready (only NEW lines after this moment are sent)." >&2
 echo "death_webhook: tailing log: $WORLD_LOG" >&2

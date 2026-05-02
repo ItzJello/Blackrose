@@ -53,19 +53,18 @@ jobs:
               make install
             fi
 
-            # Stop stack, pull GHCR images, rebuild death-webhook sidecar, start.
-            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
-            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f docker-compose.override.yml down --remove-orphans
+            # Image vars: export from CI only when secrets are non-empty. If we
+            # export empty values, they override BLACKROSE/.env and you get the
+            # wrong registry (compose ${VAR:-default} still sees VAR as set).
+            if [ -n '${{ secrets.DOCKER_IMAGE_PREFIX }}' ]; then
+              export DOCKER_IMAGE_PREFIX='${{ secrets.DOCKER_IMAGE_PREFIX }}'
+            fi
+            if [ -n '${{ secrets.DOCKER_IMAGE_TAG }}' ]; then
+              export DOCKER_IMAGE_TAG='${{ secrets.DOCKER_IMAGE_TAG }}'
+            fi
 
-            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
-            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f docker-compose.override.yml pull
-
-            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
-            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f docker-compose.override.yml build ac-death-webhook
-
-            DOCKER_IMAGE_PREFIX="${{ secrets.DOCKER_IMAGE_PREFIX }}" \
-            DOCKER_IMAGE_TAG="${{ secrets.DOCKER_IMAGE_TAG || 'master' }}" \
-              docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
+            # Stop stack, pull images, rebuild death-webhook sidecar, start.
+            docker compose -f docker-compose.yml -f docker-compose.override.yml down --remove-orphans
+            docker compose -f docker-compose.yml -f docker-compose.override.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.override.yml build ac-death-webhook
+            docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
