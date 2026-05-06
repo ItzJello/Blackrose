@@ -55,9 +55,19 @@ jobs:
             if [ -f .env ]; then
               # grep exits 1 when no match; with set -e that would abort deploy.
               _line=$(grep -E '^[[:space:]]*DOCKER_USER_ID=' .env 2>/dev/null | tail -1) || true
-              [ -n "${_line}" ] && _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r') && [ -n "${_v}" ] && _uid="${_v}"
+              if [ -n "${_line}" ]; then
+                _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r')
+                if [ -n "${_v}" ]; then
+                  _uid="${_v}"
+                fi
+              fi
               _line=$(grep -E '^[[:space:]]*DOCKER_GROUP_ID=' .env 2>/dev/null | tail -1) || true
-              [ -n "${_line}" ] && _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r') && [ -n "${_v}" ] && _gid="${_v}"
+              if [ -n "${_line}" ]; then
+                _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r')
+                if [ -n "${_v}" ]; then
+                  _gid="${_v}"
+                fi
+              fi
             fi
             mkdir -p env/dist/etc/modules env/dist/logs
             echo "brci: chown/mkdir targets _uid=${_uid} _gid=${_gid}"
