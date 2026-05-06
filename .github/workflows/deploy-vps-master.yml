@@ -32,38 +32,81 @@ jobs:
           port: ${{ secrets.VPS_PORT || '22' }}
           script_stop: true
           script: |
+            #!/usr/bin/env bash
+            # Log prefix "brci:" — avoid "deploy:" if VPS_USER secret is "deploy";
+            # GitHub masks any log line containing a secret value.
             set -euo pipefail
             cd "${{ secrets.VPS_APP_DIR }}"
 
-            # Ensure deployment always targets your master branch.
+            # Match origin/master exactly (handles force-push). ff-only pull
+            # aborts when the VPS clone has old commits not on the remote.
             git fetch --all --prune
             git checkout master
-            git pull --ff-only origin master
+            git reset --hard origin/master
+            echo "brci: git $(git rev-parse --short HEAD)"
+            echo "brci: begin etc/bind prep"
 
-            # Seed missing env/dist/etc/*.conf from templates only (does not
-            # overwrite live configs). Optional repo secret SYNC_ETC_FORCE=1
-            # replaces worldserver.conf/authserver.conf from .dist on demand.
-            if [ -n '${{ secrets.SYNC_ETC_FORCE }}' ]; then
-              export SYNC_ETC_FORCE='${{ secrets.SYNC_ETC_FORCE }}'
-            fi
-            bash apps/deploy/sync-etc-from-dist.sh .
-
-            # Bind-mounted etc/logs must be writable by the container user (compose
-            # default uid/gid 1000). Deploying as root often leaves root-owned files,
-            # which breaks entrypoint.sh (cp into etc, touch .write-test).
+            # Container bind mounts expect env/dist/etc and logs owned by
+            # DOCKER_USER_ID / DOCKER_GROUP_ID from .env (default 1000). The SSH
+            # user must own that tree briefly so sync-etc-from-dist can cp;
+            # we chown to the container uid/gid again after sync.
             _uid=1000
             _gid=1000
             if [ -f .env ]; then
-              _v=$(grep -E '^[[:space:]]*DOCKER_USER_ID=' .env | tail -1 | cut -d= -f2- | tr -d ' "\r')
-              [ -n "${_v}" ] && _uid="${_v}"
-              _v=$(grep -E '^[[:space:]]*DOCKER_GROUP_ID=' .env | tail -1 | cut -d= -f2- | tr -d ' "\r')
-              [ -n "${_v}" ] && _gid="${_v}"
+              # grep exits 1 when no match; with set -e that would abort deploy.
+              _line=$(grep -E '^[[:space:]]*DOCKER_USER_ID=' .env 2>/dev/null | tail -1) || true
+              [ -n "${_line}" ] && _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r') && [ -n "${_v}" ] && _uid="${_v}"
+              _line=$(grep -E '^[[:space:]]*DOCKER_GROUP_ID=' .env 2>/dev/null | tail -1) || true
+              [ -n "${_line}" ] && _v=$(echo "${_line}" | cut -d= -f2- | tr -d ' "\r') && [ -n "${_v}" ] && _gid="${_v}"
             fi
             mkdir -p env/dist/etc/modules env/dist/logs
-            chown -R "${_uid}:${_gid}" env/dist/etc env/dist/logs
+            echo "brci: chown/mkdir targets _uid=${_uid} _gid=${_gid}"
+
+            # sync-etc-from-dist runs as the SSH user and uses cp into
+            # env/dist/etc. If we chown that tree to DOCKER_USER_ID (often 1000)
+            # first, a non-root deploy user cannot write there and cp fails.
+            # So: make etc/logs writable by this user for sync, then chown to
+            # the container uid/gid for bind mounts.
+            _run_u="$(id -u)"
+            _run_g="$(id -g)"
+            if [ "${_run_u}" -eq 0 ]; then
+              chown -R "${_run_u}:${_run_g}" env/dist/etc env/dist/logs
+            else
+              sudo -n chown -R "${_run_u}:${_run_g}" env/dist/etc env/dist/logs \
+                || echo "brci: WARNING could not chown etc for SSH user; sync may fail"
+            fi
+
+            # Seed missing env/dist/etc/*.conf from templates only (does not
+            # overwrite live configs unless SYNC_ETC_FORCE=1).
+            if [ -n '${{ secrets.SYNC_ETC_FORCE }}' ]; then
+              export SYNC_ETC_FORCE='${{ secrets.SYNC_ETC_FORCE }}'
+            fi
+            echo "brci: run sync-etc-from-dist.sh"
+            bash apps/deploy/sync-etc-from-dist.sh .
+            echo "brci: sync-etc done"
+
+            if [ "${_run_u}" -eq 0 ]; then
+              chown -R "${_uid}:${_gid}" env/dist/etc env/dist/logs
+            else
+              sudo -n chown -R "${_uid}:${_gid}" env/dist/etc env/dist/logs \
+                || echo "brci: WARNING chown to container uid failed; bind mounts may break"
+            fi
+            echo "brci: chown binds done (_uid=${_uid} _gid=${_gid})"
+
+            echo "brci: docker ..."
+            if docker version >/dev/null 2>&1; then
+              run_docker() { docker "$@"; }
+            elif sudo -n docker version >/dev/null 2>&1; then
+              echo "brci: sudo -n docker"
+              run_docker() { sudo -n docker "$@"; }
+            else
+              echo "brci: docker not usable as user $(whoami)"
+              exit 1
+            fi
 
             if [ -n "${{ secrets.VPS_DOCKER_REGISTRY || '' }}" ]; then
-              echo "${{ secrets.VPS_DOCKER_PASSWORD }}" | docker login "${{ secrets.VPS_DOCKER_REGISTRY }}" -u "${{ secrets.VPS_DOCKER_USERNAME }}" --password-stdin
+              echo "brci: docker login"
+              echo "${{ secrets.VPS_DOCKER_PASSWORD }}" | run_docker login "${{ secrets.VPS_DOCKER_REGISTRY }}" -u "${{ secrets.VPS_DOCKER_USERNAME }}" --password-stdin
             fi
 
             # Optional build/install step on server.
@@ -85,8 +128,12 @@ jobs:
               export DOCKER_IMAGE_TAG='${{ secrets.DOCKER_IMAGE_TAG }}'
             fi
 
-            # Stop stack, pull images, rebuild death-webhook sidecar, start.
-            docker compose -f docker-compose.yml -f docker-compose.override.yml down --remove-orphans
-            docker compose -f docker-compose.yml -f docker-compose.override.yml pull
-            docker compose -f docker-compose.yml -f docker-compose.override.yml build ac-death-webhook
-            docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
+            echo "brci: compose down"
+            run_docker compose -f docker-compose.yml -f docker-compose.override.yml down --remove-orphans
+            echo "brci: compose pull"
+            run_docker compose -f docker-compose.yml -f docker-compose.override.yml pull
+            echo "brci: compose build ac-death-webhook"
+            run_docker compose -f docker-compose.yml -f docker-compose.override.yml build ac-death-webhook
+            echo "brci: compose up"
+            run_docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
+            echo "brci: done"
