@@ -40,6 +40,28 @@ jobs:
             git checkout master
             git pull --ff-only origin master
 
+            # Seed missing env/dist/etc/*.conf from templates only (does not
+            # overwrite live configs). Optional repo secret SYNC_ETC_FORCE=1
+            # replaces worldserver.conf/authserver.conf from .dist on demand.
+            if [ -n '${{ secrets.SYNC_ETC_FORCE }}' ]; then
+              export SYNC_ETC_FORCE='${{ secrets.SYNC_ETC_FORCE }}'
+            fi
+            bash apps/deploy/sync-etc-from-dist.sh .
+
+            # Bind-mounted etc/logs must be writable by the container user (compose
+            # default uid/gid 1000). Deploying as root often leaves root-owned files,
+            # which breaks entrypoint.sh (cp into etc, touch .write-test).
+            _uid=1000
+            _gid=1000
+            if [ -f .env ]; then
+              _v=$(grep -E '^[[:space:]]*DOCKER_USER_ID=' .env | tail -1 | cut -d= -f2- | tr -d ' "\r')
+              [ -n "${_v}" ] && _uid="${_v}"
+              _v=$(grep -E '^[[:space:]]*DOCKER_GROUP_ID=' .env | tail -1 | cut -d= -f2- | tr -d ' "\r')
+              [ -n "${_v}" ] && _gid="${_v}"
+            fi
+            mkdir -p env/dist/etc/modules env/dist/logs
+            chown -R "${_uid}:${_gid}" env/dist/etc env/dist/logs
+
             if [ -n "${{ secrets.VPS_DOCKER_REGISTRY || '' }}" ]; then
               echo "${{ secrets.VPS_DOCKER_PASSWORD }}" | docker login "${{ secrets.VPS_DOCKER_REGISTRY }}" -u "${{ secrets.VPS_DOCKER_USERNAME }}" --password-stdin
             fi

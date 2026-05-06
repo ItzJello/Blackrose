@@ -452,15 +452,20 @@ Ra.MinLevel = 3
 #        Description: Enable soap service
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
+#
+#        Blackrose: 1 for website/API (SOAP) and tooling; disable if unused.
 
-SOAP.Enabled = 0
+SOAP.Enabled = 1
 
 #
 #    SOAP.IP
 #        Description: Bind SOAP service to IP/hostname
 #        Default:     "127.0.0.1" - (Bind to localhost)
+#
+#        Blackrose: 0.0.0.0 so Docker-published SOAP port is reachable from the
+#        host (e.g. PHP status panel). Tighten with firewall on the host.
 
-SOAP.IP = "127.0.0.1"
+SOAP.IP = "0.0.0.0"
 
 #
 #    SOAP.Port

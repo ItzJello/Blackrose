@@ -173,13 +173,13 @@ AutoBalance.MinPlayers.Heroic.PerInstance = ""
 
 ### 5-player dungeons
 AutoBalance.InflectionPoint=0.5
-AutoBalance.InflectionPoint.CurveFloor=0.0
+AutoBalance.InflectionPoint.CurveFloor=0.12
 AutoBalance.InflectionPoint.CurveCeiling=1.0
 AutoBalance.InflectionPoint.BossModifier=1.0
 
 ### 5-player heroic dungeons
 AutoBalance.InflectionPointHeroic=0.5
-AutoBalance.InflectionPointHeroic.CurveFloor=0.0
+AutoBalance.InflectionPointHeroic.CurveFloor=0.12
 AutoBalance.InflectionPointHeroic.CurveCeiling=1.0
 AutoBalance.InflectionPointHeroic.BossModifier=1.0
 
@@ -283,15 +283,15 @@ AutoBalance.InflectionPoint.Boss.PerInstance=""
 #     AutoBalance.playerCountDifficultyOffset
 #        Offset of players inside an instance. Affects all instance types.
 #        Default:     0
-#        Blackrose: 1 = scale as if one extra player (solo uses 2-player curve); pair with StatModifier* below.
+#        0 = stat curve uses actual party size (no fake extra players).
 #        After offset, the value is capped at the instance max party size (5 for 5-man, 25 for 25-man, etc.).
-AutoBalance.playerCountDifficultyOffset=1
+AutoBalance.playerCountDifficultyOffset=0
 #
 #     AutoBalance.playerCountDifficultyOffset.ApplyAtOrBelowPlayers
 #        If non-zero, the offset above applies only when the real player count in
 #        the instance is at most this value (e.g. 3 = apply for 1–3 players, not 4–5).
 #        Default: 0 (no cap; offset applies at every party size).
-AutoBalance.playerCountDifficultyOffset.ApplyAtOrBelowPlayers=3
+AutoBalance.playerCountDifficultyOffset.ApplyAtOrBelowPlayers=0
 
 ##########################
 #
@@ -338,58 +338,58 @@ AutoBalance.playerCountDifficultyOffset.ApplyAtOrBelowPlayers=3
 #           To better understand this effect, see the interactive spreadsheet.
 #
 
-### 5-player dungeons (stat-only tuning; player count curve via playerCountDifficultyOffset)
-### Moderate bump over stock; raise Health again if too easy with offset=1.
+### 5-player dungeons (retail creature levels; stats scale with party size via InflectionPoint)
+### CurveFloor bumps solo/small groups; trash tuned softer than bosses; boss HP kept high.
 AutoBalance.StatModifier.Global=1.0
-AutoBalance.StatModifier.Health=1.35
+AutoBalance.StatModifier.Health=1.30
 AutoBalance.StatModifier.Mana=1.0
 AutoBalance.StatModifier.Armor=1.05
-AutoBalance.StatModifier.Damage=1.08
+AutoBalance.StatModifier.Damage=1.11
 
 AutoBalance.StatModifier.Boss.Global=1.0
-AutoBalance.StatModifier.Boss.Health=1.45
+AutoBalance.StatModifier.Boss.Health=1.94
 AutoBalance.StatModifier.Boss.Mana=1.0
-AutoBalance.StatModifier.Boss.Armor=1.08
-AutoBalance.StatModifier.Boss.Damage=1.12
+AutoBalance.StatModifier.Boss.Armor=1.12
+AutoBalance.StatModifier.Boss.Damage=1.21
 
 ### 5-player heroic dungeons
 AutoBalance.StatModifierHeroic.Global=1.0
-AutoBalance.StatModifierHeroic.Health=1.45
+AutoBalance.StatModifierHeroic.Health=1.38
 AutoBalance.StatModifierHeroic.Mana=1.0
-AutoBalance.StatModifierHeroic.Armor=1.08
-AutoBalance.StatModifierHeroic.Damage=1.10
+AutoBalance.StatModifierHeroic.Armor=1.06
+AutoBalance.StatModifierHeroic.Damage=1.12
 
 AutoBalance.StatModifierHeroic.Boss.Global=1.0
-AutoBalance.StatModifierHeroic.Boss.Health=1.58
+AutoBalance.StatModifierHeroic.Boss.Health=2.11
 AutoBalance.StatModifierHeroic.Boss.Mana=1.0
-AutoBalance.StatModifierHeroic.Boss.Armor=1.10
-AutoBalance.StatModifierHeroic.Boss.Damage=1.15
+AutoBalance.StatModifierHeroic.Boss.Armor=1.14
+AutoBalance.StatModifierHeroic.Boss.Damage=1.23
 
 ### Default for all raids
 AutoBalance.StatModifierRaid.Global=1.0
-AutoBalance.StatModifierRaid.Health=1.0
+AutoBalance.StatModifierRaid.Health=1.02
 AutoBalance.StatModifierRaid.Mana=1.0
-AutoBalance.StatModifierRaid.Armor=1.0
-AutoBalance.StatModifierRaid.Damage=1.0
+AutoBalance.StatModifierRaid.Armor=1.01
+AutoBalance.StatModifierRaid.Damage=1.01
 
 AutoBalance.StatModifierRaid.Boss.Global=1.0
-AutoBalance.StatModifierRaid.Boss.Health=1.0
+AutoBalance.StatModifierRaid.Boss.Health=1.35
 AutoBalance.StatModifierRaid.Boss.Mana=1.0
-AutoBalance.StatModifierRaid.Boss.Armor=1.0
-AutoBalance.StatModifierRaid.Boss.Damage=1.0
+AutoBalance.StatModifierRaid.Boss.Armor=1.03
+AutoBalance.StatModifierRaid.Boss.Damage=1.04
 
 ### Default for all heroic raids
 AutoBalance.StatModifierRaidHeroic.Global=1.0
-AutoBalance.StatModifierRaidHeroic.Health=1.0
+AutoBalance.StatModifierRaidHeroic.Health=1.04
 AutoBalance.StatModifierRaidHeroic.Mana=1.0
-AutoBalance.StatModifierRaidHeroic.Armor=1.0
-AutoBalance.StatModifierRaidHeroic.Damage=1.0
+AutoBalance.StatModifierRaidHeroic.Armor=1.02
+AutoBalance.StatModifierRaidHeroic.Damage=1.02
 
 AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
-AutoBalance.StatModifierRaidHeroic.Boss.Health=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Health=1.38
 AutoBalance.StatModifierRaidHeroic.Boss.Mana=1.0
-AutoBalance.StatModifierRaidHeroic.Boss.Armor=1.0
-AutoBalance.StatModifierRaidHeroic.Boss.Damage=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Armor=1.04
+AutoBalance.StatModifierRaidHeroic.Boss.Damage=1.05
 
 ###
 ### By default, all instances use the settings configured above. To customize settings for
